@@ -109,21 +109,18 @@ const Dashboard = () => {
       icon: Brain,
       title: 'AI Analysis',
       description: 'Advanced AI-powered resume analysis',
-      status: 'Active',
       color: 'text-purple-400'
     },
     {
       icon: Zap,
       title: 'Skill Gap',
       description: 'Identify and bridge skill gaps',
-      status: 'Ready',
       color: 'text-yellow-400'
     },
     {
       icon: BarChart3,
       title: 'Career Roadmap',
       description: 'Personalized learning paths',
-      status: 'Available',
       color: 'text-blue-400'
     }
   ]
@@ -289,9 +286,6 @@ const Dashboard = () => {
                 <feature.icon className={`w-8 h-8 ${feature.color}`} />
                 <div>
                   <h3 className="font-semibold text-white">{feature.title}</h3>
-                  <span className={`text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-400`}>
-                    {feature.status}
-                  </span>
                 </div>
               </div>
               <p className="text-gray-400 text-sm">{feature.description}</p>

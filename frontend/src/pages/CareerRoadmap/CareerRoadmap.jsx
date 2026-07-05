@@ -37,13 +37,15 @@ const CareerRoadmap = () => {
 
         // ── GET existing roadmaps — do NOT POST on every page visit ──────────
         const existingRes = await roadmapService.getUserRoadmaps()
-        const existingList = existingRes.roadmaps || existingRes.data?.roadmaps || []
+        // roadmapService returns response.data = { success, data: { roadmaps } }
+        const existingList =
+          existingRes?.data?.roadmaps ??
+          existingRes?.roadmaps ??
+          []
         if (existingList.length > 0) {
-          // Use the most recent roadmap for this role, or just the latest
           const match = existingList.find(r => r.targetRole === role) || existingList[0]
           setRoadmap(match)
         }
-        // If no roadmap exists yet, the default placeholder renders below
       }
     } catch (error) {
       console.error('Failed to load recent resume or roadmap:', error)
@@ -59,12 +61,15 @@ const CareerRoadmap = () => {
     }
     setAnalyzing(true)
     try {
+      // roadmapService returns response.data = { success, data: { roadmapId, roadmap } }
       const response = await roadmapService.generateRoadmap({ targetRole, timeline })
-      const rMap = response.roadmap || response.data?.roadmap
+      // Unwrap: response.data.roadmap OR response.roadmap
+      const rMap = response?.data?.roadmap ?? response?.roadmap
       if (rMap) {
         setRoadmap(rMap)
         toast.success('AI Roadmap generated successfully!')
       } else {
+        console.error('Unexpected roadmap shape:', response)
         toast.error('Roadmap generation returned no data')
       }
     } catch (error) {

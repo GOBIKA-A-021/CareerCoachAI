@@ -34,13 +34,15 @@ class SkillGapService {
   }
 
   async analyzeSkillGap(userSkills, targetRole) {
-    const roleRequirements = this.roleRequirements[targetRole] || this.roleRequirements['Full Stack Developer'];
-    
-    const presentSkills = this.categorizeSkills(userSkills, roleRequirements);
-    const missingSkills = this.identifyMissingSkills(userSkills, roleRequirements);
-    
-    const skillLevelAssessment = this.assessSkillLevels(userSkills, roleRequirements);
-    
+    // Guard: skills may be undefined/null when the user hasn't set them yet
+    const safeSkills = Array.isArray(userSkills) ? userSkills : [];
+    const roleRequirements =
+      this.roleRequirements[targetRole] || this.roleRequirements['Full Stack Developer'];
+
+    const presentSkills       = this.categorizeSkills(safeSkills, roleRequirements);
+    const missingSkills       = this.identifyMissingSkills(safeSkills, roleRequirements);
+    const skillLevelAssessment = this.assessSkillLevels(safeSkills, roleRequirements);
+
     return {
       presentSkills,
       missingSkills,
@@ -50,11 +52,11 @@ class SkillGapService {
   }
 
   categorizeSkills(userSkills, requirements) {
-    return userSkills.map(skill => {
+    const safeSkills = Array.isArray(userSkills) ? userSkills : [];
+    return safeSkills.map(skill => {
       const requirement = requirements.requiredSkills.find(
         req => req.skill.toLowerCase() === skill.toLowerCase()
       );
-
       return {
         skill,
         currentLevel: this.estimateLevel(skill),
@@ -65,30 +67,28 @@ class SkillGapService {
   }
 
   identifyMissingSkills(userSkills, requirements) {
+    const safeSkills = Array.isArray(userSkills) ? userSkills : [];
     return requirements.requiredSkills
-      .filter(req => 
-        !userSkills.some(userSkill => 
-          userSkill.toLowerCase() === req.skill.toLowerCase()
-        )
+      .filter(req =>
+        !safeSkills.some(s => s.toLowerCase() === req.skill.toLowerCase())
       )
       .map(req => ({
-        skill: req.skill,
-        priority: req.mandatory ? 'high' : 'medium',
-        requiredLevel: req.level,
+        skill:              req.skill,
+        priority:           req.mandatory ? 'high' : 'medium',
+        requiredLevel:      req.level,
         learningDifficulty: this.estimateDifficulty(req.skill),
-        estimatedTime: this.estimateLearningTime(req.skill, req.level),
-        resources: this.getResources(req.skill)
+        estimatedTime:      this.estimateLearningTime(req.skill, req.level),
+        resources:          this.getResources(req.skill)
       }));
   }
 
   assessSkillLevels(userSkills, requirements) {
+    const safeSkills = Array.isArray(userSkills) ? userSkills : [];
     const assessments = [];
-
-    userSkills.forEach(skill => {
+    safeSkills.forEach(skill => {
       const requirement = requirements.requiredSkills.find(
         req => req.skill.toLowerCase() === skill.toLowerCase()
       );
-
       if (requirement) {
         const currentLevel = this.estimateLevel(skill);
         assessments.push({
@@ -99,7 +99,6 @@ class SkillGapService {
         });
       }
     });
-
     return assessments;
   }
 

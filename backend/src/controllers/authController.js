@@ -56,11 +56,14 @@ const register = async (req, res) => {
       message: 'User registered successfully'
     });
   } catch (error) {
+    console.error('[register] FULL ERROR:', error);
+    console.error(error.stack);
     res.status(500).json({
       success: false,
       error: {
         code: 'SERVER_ERROR',
-        message: error.message
+        message: error.message,
+        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
       }
     });
   }
@@ -126,11 +129,14 @@ const login = async (req, res) => {
       message: 'Login successful'
     });
   } catch (error) {
+    console.error('[login] FULL ERROR:', error.message);
+    console.error(error.stack);
     res.status(500).json({
       success: false,
       error: {
         code: 'SERVER_ERROR',
-        message: error.message
+        message: error.message,
+        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
       }
     });
   }

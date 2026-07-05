@@ -19,13 +19,13 @@ const generateRoadmap = async (req, res) => {
       });
     }
 
-    // Generate roadmap
+    // Generate roadmap — guard against user.skills being undefined
     const roadmapService = new RoadmapService();
     const roadmap = await roadmapService.generateRoadmap(
       {
-        skills: user.skills,
-        experience: user.experience,
-        education: user.education
+        skills:     Array.isArray(user.skills) ? user.skills : [],
+        experience: user.experience || 0,
+        education:  user.education  || {}
       },
       targetRole,
       timeline

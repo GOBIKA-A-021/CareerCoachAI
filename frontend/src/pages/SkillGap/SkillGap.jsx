@@ -55,15 +55,23 @@ const SkillGap = () => {
   const triggerSkillGapAnalysis = async (resumeId, role) => {
     setAnalyzing(true)
     try {
+      // analysisService returns response.data.data = { analysisId, skillGap }
       const response = await analysisService.performSkillGapAnalysis({
         resumeId,
         targetRole: role
       })
-      setSkillGapData(response.skillGap || response.data?.skillGap)
-      toast.success('Skill gap analysis computed!')
+      // Unwrap: service may return { analysisId, skillGap } or { skillGap } directly
+      const gap = response?.skillGap ?? response?.data?.skillGap ?? response
+      if (gap?.presentSkills !== undefined || gap?.missingSkills !== undefined) {
+        setSkillGapData(gap)
+        toast.success('Skill gap analysis completed!')
+      } else {
+        toast.error('Analysis returned unexpected data shape')
+        console.error('Unexpected skillGap shape:', response)
+      }
     } catch (error) {
       console.error('Skill gap calculation failed:', error)
-      toast.error('Failed to calculate skill gaps')
+      toast.error(error.response?.data?.error?.message || 'Failed to calculate skill gaps')
     } finally {
       setAnalyzing(false)
     }

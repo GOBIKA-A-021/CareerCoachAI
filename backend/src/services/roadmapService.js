@@ -165,13 +165,13 @@ class RoadmapService {
   }
 
   identifyPrerequisites(userProfile) {
+    const skills = Array.isArray(userProfile?.skills) ? userProfile.skills : [];
     const prerequisites = [];
 
-    if (!userProfile.skills.includes('Git')) {
+    if (!skills.some(s => s.toLowerCase() === 'git')) {
       prerequisites.push('Learn Git version control');
     }
-
-    if (!userProfile.skills.includes('JavaScript')) {
+    if (!skills.some(s => s.toLowerCase() === 'javascript')) {
       prerequisites.push('Learn JavaScript fundamentals');
     }
 

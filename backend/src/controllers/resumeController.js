@@ -61,9 +61,15 @@ const uploadResume = async (req, res) => {
       message: 'Resume uploaded and parsing started'
     });
   } catch (error) {
+    console.error('[uploadResume] FULL ERROR:', error.message);
+    console.error('[uploadResume] Stack:', error.stack);
     res.status(500).json({
       success: false,
-      error: { code: 'SERVER_ERROR', message: error.message }
+      error: {
+        code: 'SERVER_ERROR',
+        message: error.message,
+        ...(process.env.NODE_ENV !== 'production' && { stack: error.stack })
+      }
     });
   }
 };
