@@ -1,0 +1,2560 @@
+# AI Career Coach - Sections 19-24
+
+---
+
+<a name="section-19"></a>
+# SECTION 19: FLOW DIAGRAMS
+
+## 19.1 System Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      SYSTEM FLOW DIAGRAM                           │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────┐
+│  USER    │
+└─────┬────┘
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    AUTHENTICATION FLOW                          │
+└──────────────────────────────────────────────────────────────┘
+      │
+      ├─▶ Register → Validate Input → Hash Password → Save to DB
+      │                ↓
+      │            Generate JWT → Return Token
+      │
+      └─▶ Login → Validate Credentials → Verify Password → Generate JWT
+                    ↓
+                Return Token + User Data
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    RESUME UPLOAD FLOW                          │
+└──────────────────────────────────────────────────────────────┘
+      │
+      ├─▶ Select PDF → Validate File → Upload to Server
+      │                ↓
+      │            Parse PDF → Extract Text → Store in MongoDB
+      │                ↓
+      │            Trigger AI Agent
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    AI AGENT FLOW                               │
+└──────────────────────────────────────────────────────────────┘
+      │
+      ├─▶ Initialize Agent → Load User Context
+      │                ↓
+      │            Plan Tasks → Create Task Queue
+      │                ↓
+      │            Select Tools → Execute Tasks
+      │                ↓
+      │            ├─▶ Parse Resume
+      │            ├─▶ Extract Skills
+      │            ├─▶ ATS Analysis
+      │            ├─▶ Skill Gap Analysis
+      │            ├─▶ Generate Roadmap
+      │            ├─▶ Interview Questions
+      │            └─▶ Placement Score
+      │                ↓
+      │            Store Results → Generate Report
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    RAG PIPELINE FLOW                           │
+└──────────────────────────────────────────────────────────────┘
+      │
+      ├─▶ Query → Generate Embedding → Search ChromaDB
+      │                ↓
+      │            Retrieve Context → Rank Results
+      │                ↓
+      │            Format Context → Add to Prompt
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    GEMINI API FLOW                              │
+└──────────────────────────────────────────────────────────────┘
+      │
+      ├─▶ Build Prompt → Call API → Process Response
+      │                ↓
+      │            Parse JSON → Validate Structure
+      │                ↓
+      │            Return Results
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    REPORT GENERATION FLOW                      │
+└──────────────────────────────────────────────────────────────┘
+      │
+      ├─▶ Compile Results → Generate PDF → Store File
+      │                ↓
+      │            Save Metadata → Return Download Link
+      │
+      ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    USER NOTIFICATION                           │
+└──────────────────────────────────────────────────────────────┘
+      │
+      └─▶ Email Notification → Dashboard Update → Download Ready
+```
+
+## 19.2 AI Agent Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    AI AGENT DETAILED FLOW                        │
+└─────────────────────────────────────────────────────────────────┘
+
+START
+  │
+  ▼
+┌──────────────────┐
+│ Agent Initialize │
+│ - Load config    │
+│ - Connect to DB  │
+│ - Load memory    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Receive Request  │
+│ - User ID        │
+│ - Task type      │
+│ - Input data     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Planner: Plan    │
+│ - Analyze task   │
+│ - Break down     │
+│ - Create queue   │
+│ - Set deps       │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Task Queue Empty?│
+└────────┬─────────┘
+         │
+    NO   │   YES
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌──────────┐  ┌──────────────┐
+│ Get Next │  │ Compile      │
+│ Task     │  │ Results      │
+└────┬─────┘  └──────┬───────┘
+     │               │
+     ▼               │
+┌──────────┐         │
+│ Tool     │         │
+│ Selector │         │
+└────┬─────┘         │
+     │               │
+     ▼               │
+┌──────────┐         │
+│ Execute  │         │
+│ Task     │         │
+└────┬─────┘         │
+     │               │
+     ├───────────────┘
+     │
+     ▼
+┌──────────┐
+│ Success? │
+└────┬─────┘
+     │
+ YES │ NO
+     │  │
+     │  ▼
+     │┌──────────┐
+     ││ Retry    │
+     ││ (max 3)  │
+     │└────┬─────┘
+     │     │
+     │     │ Failed?
+     │     │  YES
+     │     │   │
+     │     │   ▼
+     │     │┌──────────┐
+     │     ││ Log Error│
+     │     ││ Skip Task│
+     │     │└────┬─────┘
+     │     │     │
+     └─────┴─────┘
+           │
+           ▼
+┌──────────┐
+│ Store    │
+│ Result   │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Update   │
+│ Memory   │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Check    │
+│ Queue    │
+└────┬─────┘
+     │
+     └──────┐
+            │
+            ▼
+      ┌──────────┐
+      │ Generate │
+      │ Report   │
+      └────┬─────┘
+           │
+           ▼
+      ┌──────────┐
+      │ Return   │
+      │ Results  │
+      └────┬─────┘
+           │
+           ▼
+         END
+```
+
+## 19.3 Resume Upload Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  RESUME UPLOAD DETAILED FLOW                      │
+└─────────────────────────────────────────────────────────────────┘
+
+USER ACTION: Click "Upload Resume"
+  │
+  ▼
+┌──────────────────┐
+│ File Selection   │
+│ - Open dialog    │
+│ - Select PDF     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Client Validation│
+│ - Check file type│
+│ - Check size     │
+│ - Check name     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Valid?           │
+└────────┬─────────┘
+         │
+   NO    │   YES
+   ┌────┴────┐
+   │         │
+   ▼         ▼
+┌────────┐ ┌──────────────────┐
+│ Show   │ │ Create FormData  │
+│ Error  │ │ - Append file    │
+└────────┘ └────────┬─────────┘
+               │
+               ▼
+┌──────────────────┐
+│ API Call         │
+│ POST /api/resume │
+│ /upload          │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Server: Multer   │
+│ - Validate file  │
+│ - Save to uploads│
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ PDF Parse        │
+│ - Read file      │
+│ - Extract text   │
+│ - Get metadata   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Text Extraction  │
+│ - Clean text     │
+│ - Remove noise   │
+│ - Format text    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Structured Parse │
+│ - Extract skills │
+│ - Extract exp    │
+│ - Extract edu    │
+│ - Extract proj   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Save to MongoDB  │
+│ - Create Resume  │
+│ - Store parsed   │
+│ - Link to user   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Trigger AI Agent │
+│ - Initialize     │
+│ - Plan analysis  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Return Response  │
+│ - Resume ID     │
+│ - Status        │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Client: Update UI│
+│ - Show success   │
+│ - Update list    │
+│ - Redirect      │
+└──────────────────┘
+```
+
+## 19.4 Career Recommendation Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              CAREER RECOMMENDATION FLOW                         │
+└─────────────────────────────────────────────────────────────────┘
+
+USER: Select Target Role
+  │
+  ▼
+┌──────────────────┐
+│ Get User Profile│
+│ - Load skills    │
+│ - Load exp       │
+│ - Load goals     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Get Role Req     │
+│ - From DB        │
+│ - Required skills│
+│ - Experience     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Skill Gap Analysis│
+│ - Compare skills │
+│ - Identify gaps  │
+│ - Prioritize     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ RAG: Retrieve   │
+│ - Query ChromaDB │
+│ - Get context   │
+│ - Get resources │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Gemini: Generate │
+│ - Build prompt   │
+│ - Add context    │
+│ - Call API       │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Parse Response   │
+│ - Extract roadmap│
+│ - Extract phases │
+│ - Extract tasks  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Save Roadmap     │
+│ - To MongoDB     │
+│ - Link to user   │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Display to User │
+│ - Show phases    │
+│ - Show timeline  │
+│ - Show resources │
+└──────────────────┘
+```
+
+## 19.5 Interview Generation Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              INTERVIEW GENERATION FLOW                           │
+└─────────────────────────────────────────────────────────────────┘
+
+USER: Request Interview Questions
+  │
+  ▼
+┌──────────────────┐
+│ Get Parameters   │
+│ - Role           │
+│ - Company        │
+│ - Difficulty     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ RAG: Retrieve    │
+│ - Role questions │
+│ - Company info   │
+│ - Difficulty     │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Generate Questions│
+│ - Technical      │
+│ - Behavioral    │
+│ - Coding        │
+│ - Company spec  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Gemini: Enhance │
+│ - Add answers   │
+│ - Add hints     │
+│ - Add topics    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Shuffle & Select│
+│ - Randomize order│
+│ - Select top N  │
+│ - Categorize    │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Save Questions  │
+│ - To MongoDB    │
+│ - Link to user  │
+└────────┬─────────┘
+         │
+         ▼
+┌──────────────────┐
+│ Display to User │
+│ - By category   │
+│ - With answers  │
+│ - Practice mode │
+└──────────────────┘
+```
+
+---
+
+<a name="section-20"></a>
+# SECTION 20: UML DIAGRAMS
+
+## 20.1 Use Case Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      USE CASE DIAGRAM                             │
+└─────────────────────────────────────────────────────────────────┘
+
+                    ┌──────────────┐
+                    │    ACTORS    │
+                    └──────────────┘
+
+   ┌──────────┐          ┌──────────┐
+   │  STUDENT │          │   ADMIN  │
+   └────┬─────┘          └────┬─────┘
+        │                     │
+        │                     │
+        ▼                     ▼
+┌──────────────────────────────────────────────┐
+│              AI CAREER COACH                 │
+├──────────────────────────────────────────────┤
+│                                              │
+│  ┌────────────────────────────────────┐    │
+│  │         AUTHENTICATION              │    │
+│  ├────────────────────────────────────┤    │
+│  │  • Register                         │    │
+│  │  • Login                            │    │
+│  │  • Logout                           │    │
+│  │  • Reset Password                   │    │
+│  └────────────────────────────────────┘    │
+│                                              │
+│  ┌────────────────────────────────────┐    │
+│  │         RESUME MANAGEMENT          │    │
+│  ├────────────────────────────────────┤    │
+│  │  • Upload Resume                   │    │
+│  │  • View Resume                     │    │
+│  │  • Delete Resume                   │    │
+│  │  • Update Resume                   │    │
+│  └────────────────────────────────────┘    │
+│                                              │
+│  ┌────────────────────────────────────┐    │
+│  │         ANALYSIS                    │    │
+│  ├────────────────────────────────────┤    │
+│  │  • ATS Analysis                    │    │
+│  │  • Skill Gap Analysis              │    │
+│  │  • Placement Score                 │    │
+│  │  • Career Roadmap                  │    │
+│  └────────────────────────────────────┘    │
+│                                              │
+│  ┌────────────────────────────────────┐    │
+│  │         INTERVIEW PREP             │    │
+│  ├────────────────────────────────────┤    │
+│  │  • Generate Questions              │    │
+│  │  • Practice Mode                   │    │
+│  │  • View Answers                    │    │
+│  └────────────────────────────────────┘    │
+│                                              │
+│  ┌────────────────────────────────────┐    │
+│  │         REPORTS                    │    │
+│  ├────────────────────────────────────┤    │
+│  │  • Generate Report                 │    │
+│  │  • Download Report                 │    │
+│  │  • Share Report                    │    │
+│  └────────────────────────────────────┘    │
+│                                              │
+│  ┌────────────────────────────────────┐    │
+│  │         PROFILE                    │    │
+│  ├────────────────────────────────────┤    │
+│  │  • View Profile                    │    │
+│  │  • Update Profile                  │    │
+│  │  • Manage Settings                 │    │
+│  └────────────────────────────────────┘    │
+│                                              │
+│  ┌────────────────────────────────────┐    │
+│  │         ADMIN (Admin Only)        │    │
+│  ├────────────────────────────────────┤    │
+│  │  • Manage Users                    │    │
+│  │  • View Analytics                  │    │
+│  │  • Manage Roles                    │    │
+│  │  • System Health                   │    │
+│  └────────────────────────────────────┘    │
+│                                              │
+└──────────────────────────────────────────────┘
+
+Relationships:
+Student → Authentication, Resume Management, Analysis, Interview Prep, Reports, Profile
+Admin → Authentication, Profile, Admin
+```
+
+## 20.2 Activity Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      ACTIVITY DIAGRAM                            │
+└─────────────────────────────────────────────────────────────────┘
+
+[Start]
+  │
+  ▼
+┌──────────────┐
+│ Login        │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Navigate to  │
+│ Dashboard   │
+└──────┬───────┘
+       │
+       ▼
+┌──────────────┐
+│ Upload       │
+│ Resume?      │
+└──────┬───────┘
+       │
+   ┌───┴───┐
+   │       │
+  YES      NO
+   │       │
+   ▼       ▼
+┌──────────┐ ┌──────────┐
+│ Select   │ │ View     │
+│ PDF File │ │ Existing │
+└────┬─────┘ │ Analysis │
+     │       └──────────┘
+     ▼
+┌──────────┐
+│ Upload   │
+│ to Server│
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Parse PDF│
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Extract  │
+│ Data     │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Trigger  │
+│ AI Agent │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ ATS      │
+│ Analysis │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Skill Gap│
+│ Analysis │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Generate │
+│ Roadmap  │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Calculate│
+│ Placement│
+│ Score    │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Generate │
+│ Report   │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Display  │
+│ Results  │
+└────┬─────┘
+     │
+     ▼
+┌──────────┐
+│ Download │
+│ Report?  │
+└────┬─────┘
+     │
+   ┌─┴─┐
+   │   │
+  YES  NO
+   │   │
+   ▼   ▼
+┌────┐ ┌──────────┐
+│PDF │ │ View     │
+│Gen │ │ Dashboard│
+└─┬──┘ └────┬─────┘
+  │        │
+  └───┬────┘
+      │
+      ▼
+   [End]
+```
+
+## 20.3 Sequence Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      SEQUENCE DIAGRAM                             │
+└─────────────────────────────────────────────────────────────────┘
+
+User      Frontend      Backend      AI Agent    Gemini    MongoDB
+ │           │            │            │          │          │
+ │──Login───▶│            │            │          │          │
+ │           │──POST /api/auth/login──▶│          │          │
+ │           │            │            │          │          │
+ │           │            │──Verify──▶│          │          │
+ │           │            │            │          │          │
+ │           │            │◀──Token───│          │          │
+ │           │◀──Token+User────────────│          │          │
+ │◀──Success─│            │            │          │          │
+ │           │            │            │          │          │
+ │──Upload──▶│            │            │          │          │
+ │           │──POST /api/resume/upload──────────────▶│          │
+ │           │            │            │          │          │
+ │           │            │──Save──▶│          │          │
+ │           │            │            │          │          │
+ │           │            │◀──ID─────│          │          │
+ │           │◀──ResumeID────────────│          │          │
+ │◀──Success─│            │            │          │          │
+ │           │            │            │          │          │
+ │──Analyze─▶│            │            │          │          │
+ │           │──POST /api/analysis────────────────────────▶│          │
+ │           │            │            │          │          │
+ │           │            │──Trigger──▶│          │          │
+ │           │            │            │          │          │
+ │           │            │            │──Plan──▶│          │
+ │           │            │            │◀──Tasks─│          │
+ │           │            │            │          │          │
+ │           │            │            │──Execute─▶│          │
+ │           │            │            │          │          │
+ │           │            │            │          │──Prompt─▶│
+ │           │            │            │          │          │
+ │           │            │            │          │◀──Response│
+ │           │            │            │◀──Results│          │
+ │           │            │◀──Analysis─│          │          │
+ │           │◀──Results────────────│          │          │
+ │◀──Results│            │            │          │          │
+ │           │            │            │          │          │
+ │──Download▶│            │            │          │          │
+ │           │──GET /api/report/download──────────────────────▶│
+ │           │            │            │          │          │
+ │           │            │──Generate──▶│          │          │
+ │           │            │            │          │          │
+ │           │            │◀──PDF─────│          │          │
+ │           │◀──PDF────────────────│          │          │
+ │◀──PDF────│            │            │          │          │
+```
+
+## 20.4 Class Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       CLASS DIAGRAM                              │
+└─────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────┐
+│       User             │
+├────────────────────────┤
+│ - _id: ObjectId        │
+│ - email: String        │
+│ - password: String     │
+│ - firstName: String    │
+│ - lastName: String     │
+│ - role: String         │
+│ - targetRole: String   │
+│ - skills: String[]     │
+│ - createdAt: Date      │
+├────────────────────────┤
+│ + register()           │
+│ + login()              │
+│ + updateProfile()      │
+│ + getDashboard()       │
+└────────────────────────┘
+         │
+         │ 1
+         │
+         │ N
+┌────────────────────────┐
+│       Resume           │
+├────────────────────────┤
+│ - _id: ObjectId        │
+│ - userId: ObjectId     │
+│ - fileName: String     │
+│ - parsedContent: Object│
+│ - uploadedAt: Date     │
+├────────────────────────┤
+│ + upload()             │
+│ + parse()              │
+│ + extractSkills()      │
+│ + delete()             │
+└────────────────────────┘
+         │
+         │ 1
+         │
+         │ N
+┌────────────────────────┐
+│      Analysis          │
+├────────────────────────┤
+│ - _id: ObjectId        │
+│ - userId: ObjectId     │
+│ - resumeId: ObjectId   │
+│ - analysisType: String  │
+│ - results: Object      │
+│ - createdAt: Date      │
+├────────────────────────┤
+│ + performATS()         │
+│ + performSkillGap()    │
+│ + calculateScore()     │
+└────────────────────────┘
+         │
+         │ 1
+         │
+         │ N
+┌────────────────────────┐
+│       Report           │
+├────────────────────────┤
+│ - _id: ObjectId        │
+│ - userId: ObjectId     │
+│ - analysisId: ObjectId │
+│ - fileUrl: String      │
+│ - generatedAt: Date    │
+├────────────────────────┤
+│ + generate()           │
+│ + download()           │
+│ + share()              │
+└────────────────────────┘
+
+┌────────────────────────┐
+│    CareerAgent         │
+├────────────────────────┤
+│ - userId: ObjectId     │
+│ - state: Object        │
+│ - memory: Memory       │
+│ - planner: Planner     │
+│ - executor: Executor   │
+├────────────────────────┤
+│ + initialize()         │
+│ + process()            │
+│ + shutdown()           │
+└────────────────────────┘
+         │
+         │ uses
+         │
+┌────────────────────────┐
+│      Planner           │
+├────────────────────────┤
+│ - taskQueue: Array     │
+├────────────────────────┤
+│ + plan()               │
+│ + prioritize()         │
+│ + validate()           │
+└────────────────────────┘
+
+┌────────────────────────┐
+│      Executor          │
+├────────────────────────┤
+│ - currentTask: Object  │
+├────────────────────────┤
+│ + execute()            │
+│ + executeWithRetry()   │
+│ + handleDependency()   │
+└────────────────────────┘
+
+┌────────────────────────┐
+│   PromptBuilder        │
+├────────────────────────┤
+│ - templates: Object    │
+├────────────────────────┤
+│ + buildSystemPrompt()  │
+│ + buildUserPrompt()    │
+│ + addFewShot()         │
+└────────────────────────┘
+
+┌────────────────────────┐
+│   RAGRetriever         │
+├────────────────────────┤
+│ - chromaClient: Object  │
+├────────────────────────┤
+│ + retrieve()           │
+│ + generateEmbedding()  │
+│ + formatContext()      │
+└────────────────────────┘
+
+┌────────────────────────┐
+│   GeminiTool           │
+├────────────────────────┤
+│ - model: Object        │
+├────────────────────────┤
+│ + execute()            │
+│ + callAPI()            │
+│ + parseResponse()      │
+└────────────────────────┘
+```
+
+## 20.5 Component Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    COMPONENT DIAGRAM                             │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│                      FRONTEND LAYER                            │
+├──────────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │  React   │  │  Router  │  │  Context │  │  Hooks   │   │
+│  │  App     │  │          │  │  Provider│  │          │   │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
+│       │             │             │             │           │
+│       └─────────────┴─────────────┴─────────────┘           │
+│                            │                                 │
+│                            ▼                                 │
+│                    ┌──────────────┐                           │
+│                    │  API Client  │                           │
+│                    │  (Axios)     │                           │
+│                    └──────┬───────┘                           │
+└───────────────────────────┼─────────────────────────────────┘
+                            │ HTTP/REST
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│                      BACKEND LAYER                             │
+├──────────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ Express  │  │ Routes   │  │Middleware│  │Controllers│   │
+│  │ Server   │  │          │  │          │  │          │   │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘   │
+│       │             │             │             │           │
+│       └─────────────┴─────────────┴─────────────┘           │
+│                            │                                 │
+│                            ▼                                 │
+│                    ┌──────────────┐                           │
+│                    │  AI Agent    │                           │
+│                    │  (LangChain) │                           │
+│                    └──────┬───────┘                           │
+└───────────────────────────┼─────────────────────────────────┘
+                            │
+          ┌─────────────────┼─────────────────┐
+          │                 │                 │
+          ▼                 ▼                 ▼
+┌──────────────────┐ ┌──────────────┐ ┌──────────────┐
+│  Gemini API      │ │  ChromaDB    │ │  MongoDB     │
+│  (LLM Service)   │ │  (Vector DB) │ │  (Main DB)   │
+└──────────────────┘ └──────────────┘ └──────────────┘
+```
+
+## 20.6 Deployment Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   DEPLOYMENT DIAGRAM                             │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│                      AWS CLOUD                                  │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌────────────────────────────────────────────────────┐    │
+│  │              EC2 Instance (Ubuntu 22.04)            │    │
+│  ├────────────────────────────────────────────────────┤    │
+│  │                                                      │    │
+│  │  ┌────────────────────────────────────────────┐   │    │
+│  │  │          Docker Compose                      │   │    │
+│  │  ├────────────────────────────────────────────┤   │    │
+│  │  │                                              │   │    │
+│  │  │  ┌──────────────┐  ┌──────────────┐         │   │    │
+│  │  │  │  Frontend    │  │  Backend     │         │   │    │
+│  │  │  │  Container   │  │  Container   │         │   │    │
+│  │  │  │  (React)     │  │  (Node.js)   │         │   │    │
+│  │  │  │  Port: 3000  │  │  Port: 5000  │         │   │    │
+│  │  │  └──────────────┘  └──────────────┘         │   │    │
+│  │  │                                              │   │    │
+│  │  │  ┌──────────────┐  ┌──────────────┐         │   │    │
+│  │  │  │  ChromaDB    │  │  Nginx       │         │   │    │
+│  │  │  │  Container   │  │  Proxy       │         │   │    │
+│  │  │  │  Port: 8000  │  │  Port: 80/443│         │   │    │
+│  │  │  └──────────────┘  └──────────────┘         │   │    │
+│  │  │                                              │   │    │
+│  │  └────────────────────────────────────────────┘   │    │
+│  │                                                      │    │
+│  └────────────────────────────────────────────────────┘    │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+
+External Services:
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│  MongoDB Atlas   │  │  Google Gemini   │  │  Route 53       │
+│  (Cloud DB)      │  │  API             │  │  (DNS)          │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+
+Network Flow:
+User Browser → Route 53 → EC2 (Nginx) → Frontend/Backend → External APIs
+```
+
+## 20.7 ER Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                       ER DIAGRAM                                │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────┐
+│     users       │
+├─────────────────┤
+│ PK _id          │
+│    email        │
+│    password     │
+│    firstName    │
+│    lastName     │
+│    role         │
+│    targetRole   │
+│    skills       │
+│    createdAt    │
+└────────┬────────┘
+         │ 1
+         │ has
+         │ N
+┌────────▼────────┐
+│    resumes      │
+├─────────────────┤
+│ PK _id          │
+│ FK userId       │───┐
+│    fileName     │   │
+│    parsedContent│   │
+│    uploadedAt   │   │
+│    version      │   │
+└────────┬────────┘   │
+         │ 1           │
+         │ has          │
+         │ N            │
+┌────────▼────────┐   │
+│   analyses      │   │
+├─────────────────┤   │
+│ PK _id          │   │
+│ FK userId       │───┘
+│ FK resumeId     │───┐
+│    analysisType │   │
+│    results      │   │
+│    createdAt    │   │
+└────────┬────────┘   │
+         │ 1           │
+         │ generates   │
+         │ N            │
+┌────────▼────────┐   │
+│    reports      │   │
+├─────────────────┤   │
+│ PK _id          │   │
+│ FK userId       │───┘
+│ FK analysisId   │───┐
+│    fileUrl      │   │
+│    generatedAt  │   │
+└─────────────────┘   │
+                       │
+┌──────────────────────┐
+│   career_roles        │
+├──────────────────────┤
+│ PK _id                │
+│    title              │
+│    category           │
+│    requiredSkills     │
+│    level              │
+└──────────────────────┘
+
+┌──────────────────────┐
+│   roadmaps           │
+├──────────────────────┤
+│ PK _id                │
+│ FK userId             │───┐
+│    targetRole         │   │
+│    phases             │   │
+│    totalDuration      │   │
+└──────────────────────┘   │
+                           │
+┌──────────────────────┐   │
+│ interview_questions   │   │
+├──────────────────────┤   │
+│ PK _id                │   │
+│ FK userId             │───┘
+│    targetRole         │
+│    category           │
+│    questions          │
+└──────────────────────┘
+
+Legend:
+PK - Primary Key
+FK - Foreign Key
+1  - One
+N  - Many
+```
+
+---
+
+<a name="section-21"></a>
+# SECTION 21: DOCKER + AWS DEPLOYMENT
+
+## 21.1 Dockerfile for Frontend
+
+```dockerfile
+# Frontend Dockerfile
+FROM node:18-alpine as builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build application
+RUN npm run build
+
+# Production stage
+FROM nginx:alpine
+
+# Copy built files to nginx
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Copy nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+## 21.2 Dockerfile for Backend
+
+```dockerfile
+# Backend Dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --only=production
+
+# Copy source code
+COPY . .
+
+# Create necessary directories
+RUN mkdir -p uploads reports
+
+# Expose port
+EXPOSE 5000
+
+# Start application
+CMD ["node", "src/server.js"]
+```
+
+## 21.3 Docker Compose
+
+```yaml
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://backend:5000
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend/uploads:/app/uploads
+      - ./backend/reports:/app/reports
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/careercoach
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - CHROMADB_URL=http://chromadb:8000
+    depends_on:
+      - chromadb
+    networks:
+      - app-network
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  chroma-data:
+
+networks:
+  app-network:
+    driver: bridge
+```
+
+## 21.4 AWS EC2 Deployment Steps
+
+### Step 1: Launch EC2 Instance
+
+1. **Log in to AWS Console**
+   - Go to EC2 Dashboard
+   - Click "Launch Instance"
+
+2. **Configure Instance**
+   - Name: career-coach-server
+   - AMI: Ubuntu Server 22.04 LTS
+   - Instance Type: t3.medium (2 vCPU, 4 GB RAM)
+   - Key Pair: Create or use existing
+
+3. **Configure Security Group**
+   - SSH (Port 22): Your IP
+   - HTTP (Port 80): 0.0.0.0/0
+   - HTTPS (Port 443): 0.0.0.0/0
+   - Custom (Port 5000): 0.0.0.0/0 (for backend)
+
+4. **Launch Instance**
+
+### Step 2: Connect to EC2
+
+```bash
+# SSH into instance
+ssh -i your-key.pem ubuntu@your-ec2-public-ip
+
+# Update system
+sudo apt update && sudo apt upgrade -y
+```
+
+### Step 3: Install Docker
+
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Add user to docker group
+sudo usermod -aG docker ubuntu
+```
+
+### Step 4: Clone Repository
+
+```bash
+# Install Git
+sudo apt install git -y
+
+# Clone repository
+git clone https://github.com/yourusername/careergoal-ai.git
+cd careergoal-ai
+```
+
+### Step 5: Configure Environment Variables
+
+```bash
+# Create .env file
+cat > .env << EOF
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/careercoach
+GEMINI_API_KEY=your-gemini-api-key
+JWT_SECRET=your-jwt-secret
+CHROMADB_URL=http://chromadb:8000
+NODE_ENV=production
+EOF
+```
+
+### Step 6: Start Application
+
+```bash
+# Build and start containers
+sudo docker-compose up -d --build
+
+# Check logs
+sudo docker-compose logs -f
+```
+
+### Step 7: Configure Nginx
+
+```bash
+# Create nginx configuration
+sudo nano /etc/nginx/nginx.conf
+```
+
+```nginx
+events {
+    worker_connections 1024;
+}
+
+http {
+    upstream frontend {
+        server frontend:80;
+    }
+
+    upstream backend {
+        server backend:5000;
+    }
+
+    server {
+        listen 80;
+        server_name your-domain.com;
+
+        location / {
+            proxy_pass http://frontend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /api {
+            proxy_pass http://backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+    }
+}
+```
+
+### Step 8: Setup SSL with Let's Encrypt
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Obtain SSL certificate
+sudo certbot --nginx -d your-domain.com
+
+# Auto-renewal
+sudo certbot renew --dry-run
+```
+
+### Step 9: Configure Domain with Route 53
+
+1. **Go to Route 53**
+2. **Create Hosted Zone**
+   - Domain name: your-domain.com
+3. **Create Record Set**
+   - Type: A
+   - Value: EC2 Public IP
+4. **Update Nameservers**
+   - Copy nameservers from Route 53
+   - Update domain registrar
+
+### Step 10: Setup MongoDB Atlas
+
+1. **Create MongoDB Atlas Account**
+2. **Create Cluster**
+   - Select free tier (M0)
+   - Choose region closest to EC2
+3. **Configure Network Access**
+   - Add EC2 IP to whitelist
+   - Or allow access from anywhere (0.0.0.0/0)
+4. **Create Database User**
+   - Username: careercoach
+   - Password: strong password
+5. **Get Connection String**
+   - Copy MongoDB URI
+   - Update in .env file
+
+### Step 11: Setup ChromaDB
+
+ChromaDB is already running in Docker container. To persist data:
+
+```yaml
+# In docker-compose.yml
+chromadb:
+  image: chromadb/chroma:latest
+  ports:
+    - "8000:8000"
+  volumes:
+    - chroma-data:/chroma/chroma
+  environment:
+    - CHROMA_SERVER_HOST=0.0.0.0
+    - CHROMA_SERVER_PORT=8000
+```
+
+### Step 12: Monitor Application
+
+```bash
+# Check container status
+sudo docker-compose ps
+
+# View logs
+sudo docker-compose logs -f backend
+sudo docker-compose logs -f frontend
+
+# Restart services
+sudo docker-compose restart
+
+# Stop services
+sudo docker-compose down
+```
+
+## 21.6 Environment Variables
+
+```bash
+# .env file for production
+
+# MongoDB
+MONGODB_URI=mongodb+srv://user:password@cluster.mongodb.net/careercoach
+
+# Gemini API
+GEMINI_API_KEY=your-gemini-api-key
+
+# JWT
+JWT_SECRET=your-super-secret-jwt-key
+JWT_EXPIRES_IN=24h
+
+# ChromaDB
+CHROMADB_URL=http://chromadb:8000
+
+# Server
+NODE_ENV=production
+PORT=5000
+
+# CORS
+FRONTEND_URL=https://your-domain.com
+
+# File Upload
+MAX_FILE_SIZE=5242880
+UPLOAD_DIR=./uploads
+
+# Report Generation
+REPORT_DIR=./reports
+
+# Rate Limiting
+RATE_LIMIT_WINDOW=900000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+## 21.7 Domain + HTTPS Setup
+
+### Domain Configuration
+
+1. **Purchase Domain**
+   - Go to Route 53 or other registrar
+   - Purchase domain (e.g., careercoach.ai)
+
+2. **Configure DNS**
+   - Create A record pointing to EC2 IP
+   - Create CNAME for www (optional)
+
+### HTTPS Setup
+
+```bash
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
+
+# Obtain Certificate
+sudo certbot --nginx -d careercoach.ai -d www.careercoach.ai
+
+# Auto-renewal (already configured)
+sudo systemctl status certbot.timer
+```
+
+### Nginx SSL Configuration
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name careercoach.ai www.careercoach.ai;
+
+    ssl_certificate /etc/letsencrypt/live/careercoach.ai/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/careercoach.ai/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    location / {
+        proxy_pass http://frontend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /api {
+        proxy_pass http://backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+server {
+    listen 80;
+    server_name careercoach.ai www.careercoach.ai;
+    return 301 https://$server_name$request_uri;
+}
+```
+
+---
+
+<a name="section-22"></a>
+# SECTION 22: TESTING
+
+## 22.1 Unit Testing
+
+### Frontend Unit Testing (Jest + React Testing Library)
+
+```javascript
+// __tests__/components/Button.test.js
+import { render, screen, fireEvent } from '@testing-library/react';
+import Button from '../components/common/Button/Button';
+
+describe('Button Component', () => {
+  test('renders button with text', () => {
+    render(<Button>Click Me</Button>);
+    const button = screen.getByText('Click Me');
+    expect(button).toBeInTheDocument();
+  });
+
+  test('calls onClick handler', () => {
+    const handleClick = jest.fn();
+    render(<Button onClick={handleClick}>Click Me</Button>);
+    const button = screen.getByText('Click Me');
+    fireEvent.click(button);
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('disables button when loading', () => {
+    render(<Button loading>Click Me</Button>);
+    const button = screen.getByText('Click Me');
+    expect(button).toBeDisabled();
+  });
+});
+```
+
+### Backend Unit Testing (Jest)
+
+```javascript
+// __tests__/services/atsService.test.js
+const ATSService = require('../../src/services/atsService');
+
+describe('ATSService', () => {
+  describe('calculateKeywordMatch', () => {
+    test('returns 100 for perfect match', () => {
+      const resume = { rawText: 'JavaScript React Node.js' };
+      const jd = { keywords: ['JavaScript', 'React', 'Node.js'] };
+      const score = ATSService.calculateKeywordMatch(resume, jd);
+      expect(score).toBe(100);
+    });
+
+    test('returns 0 for no match', () => {
+      const resume = { rawText: 'Python Django' };
+      const jd = { keywords: ['JavaScript', 'React'] };
+      const score = ATSService.calculateKeywordMatch(resume, jd);
+      expect(score).toBe(0);
+    });
+  });
+
+  describe('calculateFormatScore', () => {
+    test('returns high score for well-formatted resume', () => {
+      const resume = { rawText: '• Item 1\n• Item 2\n\nSection 1\n\nSection 2' };
+      const score = ATSService.calculateFormatScore(resume);
+      expect(score).toBeGreaterThan(70);
+    });
+  });
+});
+```
+
+## 22.2 Integration Testing
+
+### API Integration Testing (Supertest)
+
+```javascript
+// __tests__/integration/auth.test.js
+const request = require('supertest');
+const app = require('../../src/server');
+const User = require('../../src/models/User');
+
+describe('Auth Integration Tests', () => {
+  beforeEach(async () => {
+    await User.deleteMany({});
+  });
+
+  describe('POST /api/auth/register', () => {
+    test('should register a new user', async () => {
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'test@example.com',
+          password: 'Password123!',
+          firstName: 'John',
+          lastName: 'Doe'
+        });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body).toHaveProperty('token');
+      expect(res.body.user.email).toBe('test@example.com');
+    });
+
+    test('should not register duplicate email', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'test@example.com',
+          password: 'Password123!',
+          firstName: 'John',
+          lastName: 'Doe'
+        });
+
+      const res = await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'test@example.com',
+          password: 'Password123!',
+          firstName: 'Jane',
+          lastName: 'Doe'
+        });
+
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
+  describe('POST /api/auth/login', () => {
+    test('should login with valid credentials', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'test@example.com',
+          password: 'Password123!',
+          firstName: 'John',
+          lastName: 'Doe'
+        });
+
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: 'Password123!'
+        });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body).toHaveProperty('token');
+    });
+
+    test('should not login with invalid credentials', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'test@example.com',
+          password: 'WrongPassword123!'
+        });
+
+      expect(res.statusCode).toBe(401);
+    });
+  });
+});
+```
+
+## 22.3 API Testing
+
+### Using Postman/Newman
+
+```javascript
+// tests/api/collection.json
+{
+  "info": {
+    "name": "Career Coach API Tests"
+  },
+  "item": [
+    {
+      "name": "Register User",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Login User",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"Password123!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        }
+      }
+    }
+  ]
+}
+```
+
+Run tests:
+```bash
+newman run tests/api/collection.json -e tests/api/environment.json
+```
+
+## 22.4 Frontend Testing
+
+### E2E Testing (Cypress)
+
+```javascript
+// cypress/e2e/dashboard.cy.js
+describe('Dashboard', () => {
+  beforeEach(() => {
+    cy.login('test@example.com', 'Password123!');
+  });
+
+  it('displays user stats', () => {
+    cy.visit('/dashboard');
+    cy.get('[data-testid="ats-score"]').should('be.visible');
+    cy.get('[data-testid="placement-score"]').should('be.visible');
+  });
+
+  it('navigates to upload page', () => {
+    cy.visit('/dashboard');
+    cy.get('[data-testid="upload-button"]').click();
+    cy.url().should('include', '/upload');
+  });
+
+  it('uploads resume successfully', () => {
+    cy.visit('/upload');
+    cy.get('input[type="file"]').selectFile('cypress/fixtures/test-resume.pdf');
+    cy.get('[data-testid="upload-button"]').click();
+    cy.get('[data-testid="success-message"]').should('be.visible');
+  });
+});
+```
+
+### Visual Regression Testing (Percy)
+
+```javascript
+// cypress/support/e2e.js
+import '@percy/cypress';
+
+describe('Visual Tests', () => {
+  it('Dashboard snapshot', () => {
+    cy.visit('/dashboard');
+    cy.percySnapshot('Dashboard');
+  });
+
+  it('Upload page snapshot', () => {
+    cy.visit('/upload');
+    cy.percySnapshot('Upload Page');
+  });
+});
+```
+
+---
+
+<a name="section-23"></a>
+# SECTION 23: SECURITY
+
+## 23.1 JWT Security
+
+```javascript
+// config/jwt.js
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
+
+const generateToken = (payload) => {
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN
+  });
+};
+
+const verifyToken = (token) => {
+  return jwt.verify(token, JWT_SECRET);
+};
+
+const generateRefreshToken = (payload) => {
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: '7d'
+  });
+};
+
+module.exports = {
+  generateToken,
+  verifyToken,
+  generateRefreshToken
+};
+```
+
+## 23.2 Password Hashing
+
+```javascript
+// utils/passwordUtils.js
+const bcrypt = require('bcrypt');
+const SALT_ROUNDS = 10;
+
+const hashPassword = async (password) => {
+  return await bcrypt.hash(password, SALT_ROUNDS);
+};
+
+const comparePassword = async (password, hashedPassword) => {
+  return await bcrypt.compare(password, hashedPassword);
+};
+
+module.exports = {
+  hashPassword,
+  comparePassword
+};
+```
+
+## 23.3 Input Validation
+
+```javascript
+// middleware/validationMiddleware.js
+const { body, validationResult } = require('express-validator');
+
+const validateRegister = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Invalid email'),
+  body('password')
+    .isLength({ min: 8 })
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
+    .withMessage('Password must be at least 8 characters with uppercase, lowercase, number, and special character'),
+  body('firstName')
+    .trim()
+    .notEmpty()
+    .withMessage('First name is required'),
+  body('lastName')
+    .trim()
+    .notEmpty()
+    .withMessage('Last name is required'),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  }
+];
+
+const validateLogin = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Invalid email'),
+  body('password')
+    .notEmpty()
+    .withMessage('Password is required'),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  }
+];
+
+module.exports = {
+  validateRegister,
+  validateLogin
+};
+```
+
+## 23.4 Rate Limiting
+
+```javascript
+// middleware/rateLimitMiddleware.js
+const rateLimit = require('express-rate-limit');
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5, // Limit each IP to 5 login attempts per windowMs
+  message: 'Too many login attempts, please try again later.',
+  skipSuccessfulRequests: true,
+});
+
+module.exports = {
+  apiLimiter,
+  authLimiter
+};
+```
+
+## 23.5 CORS
+
+```javascript
+// middleware/cors.js
+const cors = require('cors');
+
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+module.exports = cors(corsOptions);
+```
+
+## 23.6 Prompt Injection Protection
+
+```javascript
+// utils/promptSanitizer.js
+const sanitizeInput = (input) => {
+  // Remove script tags
+  input = input.replace(/<script[^>]*>.*?<\/script>/gi, '');
+  
+  // Remove command injection patterns
+  input = input.replace(/(\|\||&&|;|`)/g, '');
+  
+  // Limit length
+  input = input.substring(0, 5000);
+  
+  // Escape special characters
+  input = input.replace(/[<>]/g, '');
+  
+  return input.trim();
+};
+
+const detectPromptInjection = (input) => {
+  const injectionPatterns = [
+    /ignore previous instructions/i,
+    /system: override/i,
+    /execute: /i,
+    /\$\{.*\}/,
+    /```.*```/s
+  ];
+
+  for (const pattern of injectionPatterns) {
+    if (pattern.test(input)) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
+module.exports = {
+  sanitizeInput,
+  detectPromptInjection
+};
+```
+
+## 23.7 Security Headers
+
+```javascript
+// middleware/securityHeaders.js
+const helmet = require('helmet');
+
+const securityHeaders = helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https:'],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true
+  },
+  noSniff: true,
+  referrerPolicy: { policy: 'same-origin' }
+});
+
+module.exports = securityHeaders;
+```
+
+---
+
+<a name="section-24"></a>
+# SECTION 24: COMPLETE PROJECT EXECUTION FLOW
+
+## 24.1 Complete User Journey
+
+### Step 1: User Registration
+
+**User Action**: Click "Register" on home page
+
+**Frontend Flow**:
+1. User navigates to `/register`
+2. React renders Register component
+3. User fills form (email, password, firstName, lastName)
+4. Client-side validation runs
+5. User clicks "Create Account"
+
+**API Call**:
+```javascript
+POST /api/auth/register
+Request Body:
+{
+  "email": "john@example.com",
+  "password": "Password123!",
+  "firstName": "John",
+  "lastName": "Doe"
+}
+```
+
+**Backend Flow**:
+1. Express receives request
+2. Validation middleware checks input
+3. Password is hashed using bcrypt
+4. User document created in MongoDB
+5. JWT token generated
+6. Response sent with token and user data
+
+**Database Operation**:
+```javascript
+db.users.insertOne({
+  email: "john@example.com",
+  password: "$2b$10$hashedpassword",
+  firstName: "John",
+  lastName: "Doe",
+  role: "student",
+  createdAt: new Date()
+})
+```
+
+**Frontend Response**:
+1. Token stored in localStorage
+2. User redirected to `/dashboard`
+3. Auth context updated with user data
+
+---
+
+### Step 2: User Login
+
+**User Action**: Click "Login" and enter credentials
+
+**Frontend Flow**:
+1. User navigates to `/login`
+2. User enters email and password
+3. User clicks "Login"
+
+**API Call**:
+```javascript
+POST /api/auth/login
+Request Body:
+{
+  "email": "john@example.com",
+  "password": "Password123!"
+}
+```
+
+**Backend Flow**:
+1. Express receives request
+2. User found in MongoDB by email
+3. Password compared using bcrypt
+4. JWT token generated
+5. Last login timestamp updated
+6. Response sent with token
+
+**Database Operation**:
+```javascript
+db.users.findOne({ email: "john@example.com" })
+db.users.updateOne(
+  { _id: userId },
+  { $set: { lastLogin: new Date() } }
+)
+```
+
+---
+
+### Step 3: Upload Resume
+
+**User Action**: Click "Upload Resume" and select PDF
+
+**Frontend Flow**:
+1. User navigates to `/upload`
+2. User clicks file input
+3. User selects PDF file
+4. File validation (type, size)
+5. User clicks "Upload"
+
+**API Call**:
+```javascript
+POST /api/resume/upload
+Content-Type: multipart/form-data
+Request Body: FormData with resume file
+```
+
+**Backend Flow**:
+1. Multer middleware handles file upload
+2. File saved to `uploads/` directory
+3. PDF parsed using pdf-parse
+4. Text extracted and cleaned
+5. Structured data parsed (skills, experience, education)
+6. Resume document created in MongoDB
+7. AI Agent triggered for analysis
+
+**Database Operation**:
+```javascript
+db.resumes.insertOne({
+  userId: ObjectId("..."),
+  fileName: "resume.pdf",
+  parsedContent: {
+    rawText: "...",
+    skills: ["JavaScript", "React"],
+    experience: [...],
+    education: [...]
+  },
+  uploadedAt: new Date()
+})
+```
+
+---
+
+### Step 4: AI Agent Analysis
+
+**AI Agent Flow**:
+1. Agent initialized with user context
+2. Planner creates task queue:
+   - Parse resume
+   - Extract skills
+   - ATS analysis
+   - Skill gap analysis
+   - Roadmap generation
+   - Placement score
+3. Executor runs tasks sequentially
+
+**Task 1: ATS Analysis**
+
+**Gemini API Call**:
+```javascript
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+Request:
+{
+  "systemInstruction": "You are an expert career coach...",
+  "contents": [{
+    "role": "user",
+    "parts": [{
+      "text": "Analyze this resume for Full Stack Developer role..."
+    }]
+  }],
+  "generationConfig": {
+    "temperature": 0.7,
+    "responseMimeType": "application/json"
+  }
+}
+```
+
+**RAG Retrieval**:
+```javascript
+// Query ChromaDB
+chromaClient.query({
+  collectionName: "ats_guides",
+  queryEmbeddings: [queryEmbedding],
+  nResults: 5
+})
+```
+
+**Database Operation**:
+```javascript
+db.analyses.insertOne({
+  userId: ObjectId("..."),
+  resumeId: ObjectId("..."),
+  analysisType: "ats",
+  results: {
+    atsScore: { overall: 75, ... }
+  },
+  createdAt: new Date()
+})
+```
+
+**Task 2: Skill Gap Analysis**
+
+**Gemini API Call**:
+```javascript
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+Request:
+{
+  "contents": [{
+    "role": "user",
+    "parts": [{
+      "text": "Perform skill gap analysis..."
+    }]
+  }]
+}
+```
+
+**RAG Retrieval**:
+```javascript
+chromaClient.query({
+  collectionName: "roadmaps",
+  queryEmbeddings: [queryEmbedding],
+  nResults: 5
+})
+```
+
+**Database Operation**:
+```javascript
+db.analyses.insertOne({
+  userId: ObjectId("..."),
+  resumeId: ObjectId("..."),
+  analysisType: "skill_gap",
+  results: {
+    skillGap: { presentSkills: [...], missingSkills: [...] }
+  }
+})
+```
+
+---
+
+### Step 5: Generate Roadmap
+
+**User Action**: Click "Generate Roadmap"
+
+**Frontend Flow**:
+1. User navigates to `/roadmap`
+2. User selects target role
+3. User sets timeline
+4. User clicks "Generate"
+
+**API Call**:
+```javascript
+POST /api/analysis/roadmap
+Request Body:
+{
+  "userId": "...",
+  "targetRole": "Full Stack Developer",
+  "timeline": "6 months"
+}
+```
+
+**Backend Flow**:
+1. Roadmap service called
+2. Skill gap retrieved from analysis
+3. RAG retrieves learning resources
+4. Gemini generates phased roadmap
+5. Roadmap saved to MongoDB
+
+**Gemini API Call**:
+```javascript
+POST https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent
+Request:
+{
+  "contents": [{
+    "role": "user",
+    "parts": [{
+      "text": "Generate 6-month roadmap for Full Stack Developer..."
+    }]
+  }]
+}
+```
+
+**Database Operation**:
+```javascript
+db.roadmaps.insertOne({
+  userId: ObjectId("..."),
+  targetRole: "Full Stack Developer",
+  phases: [
+    {
+      phaseNumber: 1,
+      title: "Foundation Building",
+      duration: "2 months",
+      skillsToLearn: [...],
+      projects: [...]
+    },
+    ...
+  ],
+  totalDuration: "6 months"
+})
+```
+
+---
+
+### Step 6: Generate Interview Questions
+
+**User Action**: Click "Interview Questions"
+
+**Frontend Flow**:
+1. User navigates to `/interview`
+2. User selects role, company, difficulty
+3. User clicks "Generate"
+
+**API Call**:
+```javascript
+POST /api/interview/generate
+Request Body:
+{
+  "targetRole": "Full Stack Developer",
+  "company": "Google",
+  "difficulty": "medium"
+}
+```
+
+**Backend Flow**:
+1. Interview service called
+2. RAG retrieves question bank
+3. Questions filtered by role and difficulty
+4. Company-specific questions added
+5. Gemini enhances with answers
+6. Questions saved to MongoDB
+
+**RAG Retrieval**:
+```javascript
+chromaClient.query({
+  collectionName: "interview_questions",
+  queryEmbeddings: [queryEmbedding],
+  nResults: 10
+})
+```
+
+**Database Operation**:
+```javascript
+db.interviewQuestions.insertOne({
+  userId: ObjectId("..."),
+  targetRole: "Full Stack Developer",
+  questions: {
+    technical: [...],
+    behavioral: [...],
+    coding: [...],
+    companySpecific: [...]
+  }
+})
+```
+
+---
+
+### Step 7: Calculate Placement Score
+
+**User Action**: Click "Placement Score"
+
+**Frontend Flow**:
+1. User navigates to `/placement-score`
+2. Score automatically calculated from analysis
+
+**Backend Flow**:
+1. Placement service called
+2. Technical score calculated from skill gap
+3. Project score calculated from resume projects
+4. Resume score from ATS analysis
+5. Communication score estimated
+6. Weighted average computed
+7. Probability calculated
+
+**Calculation**:
+```javascript
+technicalScore = (matchedSkills / totalSkills) * 100
+projectScore = (projectCount * 15) + (complexityBonus)
+resumeScore = atsScore.overall
+communicationScore = 70 + (hasDescriptions ? 15 : 0)
+
+overallScore = 
+  (technicalScore * 0.40) +
+  (projectScore * 0.25) +
+  (resumeScore * 0.25) +
+  (communicationScore * 0.10)
+```
+
+**Database Operation**:
+```javascript
+db.analyses.updateOne(
+  { _id: analysisId },
+  { $set: { 
+    "results.placementScore": {
+      technical: 75,
+      projects: 65,
+      resume: 70,
+      communication: 80,
+      overall: 68,
+      placementProbability: "High (60-80%)"
+    }
+  }}
+)
+```
+
+---
+
+### Step 8: Generate Report
+
+**User Action**: Click "Generate Report"
+
+**Frontend Flow**:
+1. User navigates to `/reports`
+2. User clicks "Generate PDF"
+3. Progress bar shown
+
+**API Call**:
+```javascript
+POST /api/report/generate
+Request Body:
+{
+  "analysisId": "...",
+  "reportType": "comprehensive"
+}
+```
+
+**Backend Flow**:
+1. Report service called
+2. All analysis results compiled
+3. PDF document created using PDFKit
+4. Sections added: Title, Summary, ATS, Skill Gap, Roadmap, Interview, Score
+5. PDF saved to `reports/` directory
+6. Report metadata saved to MongoDB
+
+**PDF Generation**:
+```javascript
+const doc = new PDFDocument();
+doc.fontSize(24).text('Career Intelligence Report');
+doc.fontSize(14).text(`ATS Score: ${atsScore}`);
+// ... add more sections
+doc.end();
+```
+
+**Database Operation**:
+```javascript
+db.reports.insertOne({
+  userId: ObjectId("..."),
+  analysisId: ObjectId("..."),
+  fileUrl: "/reports/report_123.pdf",
+  reportType: "comprehensive",
+  generatedAt: new Date()
+})
+```
+
+---
+
+### Step 9: Download Report
+
+**User Action**: Click "Download PDF"
+
+**Frontend Flow**:
+1. User clicks download button
+2. File download triggered
+
+**API Call**:
+```javascript
+GET /api/report/:id/download
+```
+
+**Backend Flow**:
+1. Report found in MongoDB
+2. File stream created
+3. File sent to client
+
+---
+
+### Step 10: Admin Dashboard
+
+**User Action**: Admin logs in and views dashboard
+
+**Frontend Flow**:
+1. Admin navigates to `/admin`
+2. Dashboard loads with analytics
+
+**API Call**:
+```javascript
+GET /api/admin/analytics
+```
+
+**Backend Flow**:
+1. Admin middleware verifies role
+2. Analytics service called
+3. User count, analysis count, scores calculated
+4. System health checked
+5. Response sent
+
+**Database Operations**:
+```javascript
+db.users.countDocuments()
+db.resumes.countDocuments()
+db.analyses.countDocuments()
+db.analyses.aggregate([
+  { $group: { _id: null, avgATS: { $avg: "$results.atsScore.overall" } } }
+])
+```
+
+---
+
+## 24.2 Summary
+
+This complete project execution flow demonstrates:
+
+1. **User Journey**: From registration to report generation
+2. **Frontend Actions**: Every click and navigation
+3. **API Calls**: All REST API endpoints with request/response
+4. **AI Agent Steps**: Task planning, execution, tool selection
+5. **Database Operations**: All MongoDB CRUD operations
+6. **Gemini API Calls**: LLM integration for analysis
+7. **RAG Pipeline**: Context retrieval from ChromaDB
+8. **Security**: JWT authentication, input validation, rate limiting
+9. **Error Handling**: Graceful error responses
+10. **Performance**: Efficient data retrieval and caching
+
+The system provides a complete, production-ready AI-powered career coaching platform with industry-standard architecture, security, and scalability.
+
+---
+
+# DOCUMENTATION COMPLETE
+
+This comprehensive documentation covers all 24 sections as requested:
+
+✓ Section 1: Problem Statement & Requirements
+✓ Section 2: System Architecture
+✓ Section 3: Database Design
+✓ Section 4: AI Agent Design
+✓ Section 5: Prompt Engineering
+✓ Section 6: Vector Database (ChromaDB)
+✓ Section 7: Gemini API Integration
+✓ Section 8: Resume Processing
+✓ Section 9: Career Engine
+✓ Section 10: Interview Generator
+✓ Section 11: Placement Score
+✓ Section 12: PDF Report Generation
+✓ Section 13: Authentication
+✓ Section 14: Admin Panel
+✓ Section 15: Frontend Design
+✓ Section 16: Folder Structure
+✓ Section 17: AI Agent Structure
+✓ Section 18: REST APIs
+✓ Section 19: Flow Diagrams
+✓ Section 20: UML Diagrams
+✓ Section 21: Docker + AWS Deployment
+✓ Section 22: Testing Strategy
+✓ Section 23: Security Implementation
+✓ Section 24: Complete Project Execution Flow
+
+The documentation is industry-production ready with:
+- Detailed technical specifications
+- Code examples for all components
+- ASCII diagrams for visualization
+- Complete API documentation
+- Deployment guides
+- Security best practices
+- Testing strategies
+
+This serves as a complete blueprint for building the AI Career Coach and Resume Intelligence Agent project.
